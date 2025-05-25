@@ -860,91 +860,89 @@ function handleTouchEndGlobal(event) {
 
 
     if (isTouchActiveGame && isInGameState) {
-        if (isTap) {
-            // <<< START GEWIJZIGD: DUBBEL-TAP LOGICA >>>
-            const now = Date.now();
-            let tapped2UpArea = false;
+        // <<< START GEWIJZIGD: DUBBEL-TAP LOGICA >>>
+        const now = Date.now();
+        let tapped2UpArea = false;
 
-            if (typeof MARGIN_SIDE !== 'undefined' && typeof MARGIN_TOP !== 'undefined' && gameCanvas && gameCtx) {
-                gameCtx.font = "20px 'Press Start 2P'"; // Zelfde font als UI
-                const label2PText = (isCoopAIDemoActive) ? "DEMO-2" : ((isPlayerTwoAI && selectedGameMode === 'coop') ? "AI P2" : "2UP");
-                const label2PWidth = gameCtx.measureText(label2PText).width;
-                const score2PText = String(player2Score); // Of de relevante score variabele
-                const score2PWidth = gameCtx.measureText(score2PText).width;
+        if (typeof MARGIN_SIDE !== 'undefined' && typeof MARGIN_TOP !== 'undefined' && gameCanvas && gameCtx) {
+            gameCtx.font = "20px 'Press Start 2P'"; // Zelfde font als UI
+            const label2PText = (isCoopAIDemoActive) ? "DEMO-2" : ((isPlayerTwoAI && selectedGameMode === 'coop') ? "AI P2" : "2UP");
+            const label2PWidth = gameCtx.measureText(label2PText).width;
+            const score2PText = String(player2Score); // Of de relevante score variabele
+            const score2PWidth = gameCtx.measureText(score2PText).width;
 
-                const area2UpX = gameCanvas.width - MARGIN_SIDE - Math.max(label2PWidth, score2PWidth) - SCORE_AREA_TAP_MARGIN;
-                const area2UpY = MARGIN_TOP - SCORE_AREA_TAP_MARGIN;
-                const area2UpWidth = Math.max(label2PWidth, score2PWidth) + 2 * SCORE_AREA_TAP_MARGIN;
-                const area2UpHeight = (SCORE_OFFSET_Y + 5 + parseFloat(gameCtx.font)) + 2 * SCORE_AREA_TAP_MARGIN; // Geschatte hoogte
+            const area2UpX = gameCanvas.width - MARGIN_SIDE - Math.max(label2PWidth, score2PWidth) - SCORE_AREA_TAP_MARGIN;
+            const area2UpY = MARGIN_TOP - SCORE_AREA_TAP_MARGIN;
+            const area2UpWidth = Math.max(label2PWidth, score2PWidth) + 2 * SCORE_AREA_TAP_MARGIN;
+            const area2UpHeight = (SCORE_OFFSET_Y + 5 + parseFloat(gameCtx.font)) + 2 * SCORE_AREA_TAP_MARGIN; // Geschatte hoogte
 
-                if (canvasTapX >= area2UpX && canvasTapX <= area2UpX + area2UpWidth &&
-                    canvasTapY >= area2UpY && canvasTapY <= area2UpY + area2UpHeight) {
-                    tapped2UpArea = true;
-                }
+            if (canvasTapX >= area2UpX && canvasTapX <= area2UpX + area2UpWidth &&
+                canvasTapY >= area2UpY && canvasTapY <= area2UpY + area2UpHeight) {
+                tapped2UpArea = true;
             }
+        }
 
-            if (tapped2UpArea) {
-                if (lastTapArea === '2up' && (now - lastTapTimestamp < DOUBLE_TAP_MAX_INTERVAL)) {
-                    // Dubbel-tap op 2UP gebied gedetecteerd!
-                    if (typeof stopGameAndShowMenu === 'function') {
-                        stopGameAndShowMenu();
-                        lastTapArea = null; // Reset voor volgende interactie
-                        lastTapTimestamp = 0;
-                        isTouchActiveGame = false;
-                        return; // Verlaat functie na menu switch
-                    }
-                }
-                lastTapArea = '2up';
-                lastTapTimestamp = now;
-            } else {
-                // Als er ergens anders getapt wordt, reset de dubbel-tap state voor 2UP
-                if (lastTapArea === '2up') { // Alleen resetten als de *vorige* tap op 2up was
-                    lastTapArea = null;
+        if (tapped2UpArea) {
+            if (lastTapArea === '2up' && (now - lastTapTimestamp < DOUBLE_TAP_MAX_INTERVAL)) {
+                // Dubbel-tap op 2UP gebied gedetecteerd!
+                if (typeof stopGameAndShowMenu === 'function') {
+                    stopGameAndShowMenu();
+                    lastTapArea = null; // Reset voor volgende interactie
                     lastTapTimestamp = 0;
+                    isTouchActiveGame = false;
+                    return; // Verlaat functie na menu switch
                 }
             }
-            // <<< EINDE GEWIJZIGD: DUBBEL-TAP LOGICA >>>
+            lastTapArea = '2up';
+            lastTapTimestamp = now;
+        } else {
+            // Als er ergens anders getapt wordt, reset de dubbel-tap state voor 2UP
+            if (lastTapArea === '2up') { // Alleen resetten als de *vorige* tap op 2up was
+                lastTapArea = null;
+                lastTapTimestamp = 0;
+            }
+        }
+        // <<< EINDE GEWIJZIGD: DUBBEL-TAP LOGICA >>>
 
 
-            // Single fire logica (blijft behouden)
-            if (selectedFiringMode === 'single' && !tapped2UpArea) { // Alleen als niet op 2UP getapt is voor menu exit
-                if (now - lastTapTime > SHOOT_COOLDOWN / 2) {
-                    let shooterPlayerIdForTap = 'player1';
-                    if (isTwoPlayerMode && selectedGameMode === 'coop') {
-                        // Basis: tap op linkerhelft voor P1, rechterhelft voor P2
-                        if (canvasTapX > gameCanvas.width / 2 && ship2 && player2Lives > 0) {
-                            shooterPlayerIdForTap = isPlayerTwoAI ? 'ai_p2' : 'player2';
-                        }
-                    } else if (isTwoPlayerMode && selectedGameMode === 'normal'){
-                         shooterPlayerIdForTap = (currentPlayer === 1) ? 'player1' : 'player2';
+        // Single fire logica (blijft behouden)
+        if (selectedFiringMode === 'single' && !tapped2UpArea) { // Alleen als niet op 2UP getapt is voor menu exit
+            if (now - lastTapTime > SHOOT_COOLDOWN / 2) {
+                let shooterPlayerIdForTap = 'player1';
+                if (isTwoPlayerMode && selectedGameMode === 'coop') {
+                    // Basis: tap op linkerhelft voor P1, rechterhelft voor P2
+                    if (canvasTapX > gameCanvas.width / 2 && ship2 && player2Lives > 0) {
+                        shooterPlayerIdForTap = isPlayerTwoAI ? 'ai_p2' : 'player2';
                     }
-
-                    if (shooterPlayerIdForTap === 'player1') p1FireInputWasDown = true;
-                    else if (shooterPlayerIdForTap === 'player2' || shooterPlayerIdForTap === 'ai_p2') p2FireInputWasDown = true;
-
-                    if (typeof firePlayerBullet === 'function') {
-                         firePlayerBullet(shooterPlayerIdForTap);
-                    }
-                    if (shooterPlayerIdForTap === 'player1') p1FireInputWasDown = false;
-                    else if (shooterPlayerIdForTap === 'player2' || shooterPlayerIdForTap === 'ai_p2') p2FireInputWasDown = false;
-
-                    lastTapTime = now;
+                } else if (isTwoPlayerMode && selectedGameMode === 'normal'){
+                     shooterPlayerIdForTap = (currentPlayer === 1) ? 'player1' : 'player2';
                 }
+
+                if (shooterPlayerIdForTap === 'player1') p1FireInputWasDown = true;
+                else if (shooterPlayerIdForTap === 'player2' || shooterPlayerIdForTap === 'ai_p2') p2FireInputWasDown = true;
+
+                if (typeof firePlayerBullet === 'function') {
+                     firePlayerBullet(shooterPlayerIdForTap);
+                }
+                if (shooterPlayerIdForTap === 'player1') p1FireInputWasDown = false;
+                else if (shooterPlayerIdForTap === 'player2' || shooterPlayerIdForTap === 'ai_p2') p2FireInputWasDown = false;
+
+                lastTapTime = now;
             }
         }
         shootPressed = false;
-        p2ShootPressed = false; 
-        isTouchActiveGame = false; 
+        p2ShootPressed = false;
+        isTouchActiveGame = false;
     } else if (isTouchActiveMenu && !isInGameState) {
         isTouchActiveMenu = false;
         if (typeof handleCanvasTouch === 'function') {
             handleCanvasTouch(event, 'end', isTap);
         }
-    } else { 
+    } else {
         isTouchActiveGame = false;
         isTouchActiveMenu = false;
     }
-    touchedMenuButtonIndex = -1; 
+    touchedMenuButtonIndex = -1;
 }
 
 
@@ -955,10 +953,11 @@ function handleKeyDown(e) {
         if (isTouchActiveGame && isInGameState) {
             if (e.key === 'p' || e.key === 'P') { // Pauze mag altijd
                  if(typeof togglePause === 'function') togglePause();
-            } else if (e.key === "Escape" || e.key === "Enter") { // Menu verlaten mag altijd
+            } else if (e.key === "Escape") { // Menu verlaten mag altijd met Escape
                  if(isInGameState && typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu();
             }
-            // Andere game-gerelateerde keyboard input wordt genegeerd als touch actief is.
+            // Andere game-gerelateerde keyboard input wordt genegeerd als touch actief is, BEHALVE Enter voor menu (als het niet handmatig is).
+            // De "Enter" voor menu exit bij AI demo is hieronder al correct afgehandeld.
             return;
         }
 
@@ -982,31 +981,42 @@ function handleKeyDown(e) {
             }
 
             if (!isPaused) {
-                if (!isManualControl) {
+                if (!isManualControl) { // AI Demo
                     if (isPlayerTwoAI && selectedGameMode === 'normal' && currentPlayer === 2) {
                         // AI P2 is active, P1 (mens) kan niet stoppen.
-                    } else {
-                        if (e.key === "Escape" || e.key === "Enter") {
-                            if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu();
-                        } else if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key !== 'p' && e.key !== 'P') {
-                            if(typeof showMenuState === 'function') showMenuState();
-                        }
+                    } else if (e.key === "Escape") { // Alleen Escape stopt AI demo. Enter niet.
+                        if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu();
+                    } else if (e.key !== "Enter" && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key !== 'p' && e.key !== 'P') {
+                        if(typeof showMenuState === 'function') showMenuState();
                     }
-                } else {
-                    switch (e.code) {
-                        case "ArrowLeft": case "KeyA": keyboardP1LeftDown = true; break;
-                        case "ArrowRight": case "KeyD": keyboardP1RightDown = true; break;
-                        case "Space": case "ArrowUp": case "KeyW":
+                } else { // Manual Control
+                    if (e.key === "Enter") {
+                        if (isTwoPlayerMode && selectedGameMode === 'coop') {
                             keyboardP1ShootDown = true;
-                            break;
-                        case "KeyJ": case "Numpad4": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2LeftDown = true; break;
-                        case "KeyL": case "Numpad6": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2RightDown = true; break;
-                        case "KeyI": case "Numpad0": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2ShootDown = true; break;
-                        case "Escape": case "Enter": if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu(); break;
+                            if (!isPlayerTwoAI) keyboardP2ShootDown = true;
+                        } else if (isTwoPlayerMode && selectedGameMode === 'normal') {
+                            if (currentPlayer === 1) keyboardP1ShootDown = true;
+                            else if (currentPlayer === 2 && !isPlayerTwoAI) keyboardP2ShootDown = true;
+                        } else { // 1P Classic
+                            keyboardP1ShootDown = true;
+                        }
+                    } else {
+                        switch (e.code) {
+                            case "ArrowLeft": case "KeyA": keyboardP1LeftDown = true; break;
+                            case "ArrowRight": case "KeyD": keyboardP1RightDown = true; break;
+                            case "Space": case "ArrowUp": case "KeyW":
+                                keyboardP1ShootDown = true;
+                                break;
+                            case "KeyJ": case "Numpad4": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2LeftDown = true; break;
+                            case "KeyL": case "Numpad6": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2RightDown = true; break;
+                            case "KeyI": case "Numpad0": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2ShootDown = true; break;
+                            case "Escape": if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu(); break;
+                            // "Enter" voor vuren is hierboven afgehandeld.
+                        }
+                        if (!keyboardP2LeftDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "j") keyboardP2LeftDown = true;
+                        if (!keyboardP2RightDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "l") keyboardP2RightDown = true;
+                        if (!keyboardP2ShootDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "i") keyboardP2ShootDown = true;
                     }
-                    if (!keyboardP2LeftDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "j") keyboardP2LeftDown = true;
-                    if (!keyboardP2RightDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "l") keyboardP2RightDown = true;
-                    if (!keyboardP2ShootDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "i") keyboardP2ShootDown = true;
                 }
             }
         } else { // Menu or Score Screen
@@ -1078,25 +1088,34 @@ function handleKeyUp(e) {
     try {
         // Key up events worden altijd verwerkt, ongeacht touch state,
         // om te zorgen dat knoppen correct losgelaten worden.
-        switch (e.code) {
-            case "ArrowLeft": case "KeyA": keyboardP1LeftDown = false; break;
-            case "ArrowRight": case "KeyD": keyboardP1RightDown = false; break;
-            case "Space": case "ArrowUp": case "KeyW":
-                keyboardP1ShootDown = false;
-                if (selectedFiringMode === 'single') p1JustFiredSingle = false;
-                break;
-            case "KeyJ": case "Numpad4": keyboardP2LeftDown = false; break;
-            case "KeyL": case "Numpad6": keyboardP2RightDown = false; break;
-            case "KeyI": case "Numpad0":
+        if (e.key === "Enter") {
+            keyboardP1ShootDown = false;
+            keyboardP2ShootDown = false;
+            if (selectedFiringMode === 'single') {
+                p1JustFiredSingle = false;
+                p2JustFiredSingle = false;
+            }
+        } else {
+            switch (e.code) {
+                case "ArrowLeft": case "KeyA": keyboardP1LeftDown = false; break;
+                case "ArrowRight": case "KeyD": keyboardP1RightDown = false; break;
+                case "Space": case "ArrowUp": case "KeyW":
+                    keyboardP1ShootDown = false;
+                    if (selectedFiringMode === 'single') p1JustFiredSingle = false;
+                    break;
+                case "KeyJ": case "Numpad4": keyboardP2LeftDown = false; break;
+                case "KeyL": case "Numpad6": keyboardP2RightDown = false; break;
+                case "KeyI": case "Numpad0":
+                    keyboardP2ShootDown = false;
+                    if (selectedFiringMode === 'single') p2JustFiredSingle = false;
+                    break;
+            }
+            if (e.key.toLowerCase() === "j") keyboardP2LeftDown = false;
+            if (e.key.toLowerCase() === "l") keyboardP2RightDown = false;
+            if (e.key.toLowerCase() === "i") {
                 keyboardP2ShootDown = false;
                 if (selectedFiringMode === 'single') p2JustFiredSingle = false;
-                break;
-        }
-        if (e.key.toLowerCase() === "j") keyboardP2LeftDown = false;
-        if (e.key.toLowerCase() === "l") keyboardP2RightDown = false;
-        if (e.key.toLowerCase() === "i") {
-            keyboardP2ShootDown = false;
-            if (selectedFiringMode === 'single') p2JustFiredSingle = false;
+            }
         }
 
     } catch(err) { console.error("Error in handleKeyUp:", err); keyboardP1LeftDown = false; keyboardP1RightDown = false; keyboardP1ShootDown = false; keyboardP2LeftDown = false; keyboardP2RightDown = false; keyboardP2ShootDown = false; p1JustFiredSingle = false; p2JustFiredSingle = false;}
