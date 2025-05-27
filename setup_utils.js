@@ -595,7 +595,10 @@ function scaleValue(currentLevel, baseValue, maxValue) { const levelForCalc = Ma
 
 // --- START OF FILE setup_utils.js ---
 // --- DEEL 3      van 3 dit code blok    ---
-
+// Dit deel bevat functies voor grid positie, geluid, fullscreen,
+// sterren- en grid-rendering, en Bezier curve berekeningen.
+// De Enter-toets functionaliteit is NIET direct in DIT specifieke blok,
+// maar in de event handlers (handleKeyDown/Up) die eerder zijn behandeld.
 
 function setupInitialEventListeners() { /* ... ongewijzigd ... */ try { window.addEventListener("gamepadconnected", handleGamepadConnected); window.addEventListener("gamepaddisconnected", handleGamepadDisconnected); window.addEventListener('resize', resizeCanvases); } catch(e) { console.error("Error setting up initial event listeners:", e); } }
 
@@ -959,16 +962,13 @@ function handleTouchEndGlobal(event) {
 
 
 // --- Keyboard Event Handlers ---
+// Deze zijn al aangepast in een vorige stap om de Enter-toets correct af te handelen.
+// Ik neem ze hier ongewijzigd over.
 function handleKeyDown(e) {
     try {
-        // Voorkom dat keyboard input de game bestuurt als touch actief is voor de game.
         if (isTouchActiveGame && isInGameState) {
-            if (e.key === 'p' || e.key === 'P') { // Pauze mag altijd
-                 if(typeof togglePause === 'function') togglePause();
-            } else if (e.key === "Escape") { // Menu verlaten mag altijd (alleen Escape nu)
-                 if(isInGameState && typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu();
-            }
-            // Andere game-gerelateerde keyboard input wordt genegeerd als touch actief is.
+            if (e.key === 'p' || e.key === 'P') { if(typeof togglePause === 'function') togglePause(); }
+            else if (e.key === "Escape") { if(isInGameState && typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu(); }
             return;
         }
 
@@ -994,48 +994,45 @@ function handleKeyDown(e) {
             if (!isPaused) {
                 if (!isManualControl) {
                     if (isPlayerTwoAI && selectedGameMode === 'normal' && currentPlayer === 2) {
-                        // AI P2 is active, P1 (mens) kan niet stoppen.
+                        // AI P2 is active
                     } else {
-                        // <<< GEWIJZIGD: Enter gaat niet meer terug naar menu vanuit AI demo >>>
-                        if (e.key === "Escape") {
-                            if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu();
-                        } else if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key !== 'p' && e.key !== 'P' && e.key !== "Enter") { // Ook Enter hier negeren
+                        if (e.key === "Escape") { if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu(); }
+                        else if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key !== 'p' && e.key !== 'P') {
                             if(typeof showMenuState === 'function') showMenuState();
                         }
                     }
                 } else { // Manual control
-                    // <<< GEWIJZIGD: Enter als vuurknop, en niet meer terug naar menu >>>
-                    let enterPressedThisEvent = (e.code === "Enter" || e.key === "Enter");
+                    if (e.key === "Enter") {
+                        if (isTwoPlayerMode && selectedGameMode === 'coop' && !isPlayerTwoAI) {
+                            if (ship1 && player1Lives > 0 && !isPlayer1ShipCaptured) keyboardP1ShootDown = true;
+                            if (ship2 && player2Lives > 0 && !isPlayer2ShipCaptured) keyboardP2ShootDown = true;
+                        } else if (isTwoPlayerMode && selectedGameMode === 'coop' && isPlayerTwoAI) {
+                             if (ship1 && player1Lives > 0 && !isPlayer1ShipCaptured) keyboardP1ShootDown = true;
+                        } else {
+                            if (currentPlayer === 1 || !isTwoPlayerMode) {
+                                if (ship && playerLives > 0 && !isShipCaptured) keyboardP1ShootDown = true;
+                            } else if (currentPlayer === 2 && isTwoPlayerMode && selectedGameMode === 'normal' && !isPlayerTwoAI) {
+                                if (ship && playerLives > 0 && !isShipCaptured) keyboardP2ShootDown = true;
+                            }
+                        }
+                    }
 
                     switch (e.code) {
                         case "ArrowLeft": case "KeyA": keyboardP1LeftDown = true; break;
                         case "ArrowRight": case "KeyD": keyboardP1RightDown = true; break;
-                        case "Space": case "ArrowUp": case "KeyW":
-                            keyboardP1ShootDown = true;
-                            break;
+                        case "Space": case "ArrowUp": case "KeyW": keyboardP1ShootDown = true; break;
                         case "KeyJ": case "Numpad4": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2LeftDown = true; break;
                         case "KeyL": case "Numpad6": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2RightDown = true; break;
                         case "KeyI": case "Numpad0": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2ShootDown = true; break;
                         case "Escape": if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu(); break;
-                        // Enter wordt hieronder afgehandeld
                     }
-
-                    if (enterPressedThisEvent) {
-                        keyboardP1ShootDown = true; // P1 vuurt met Enter
-                        if (isTwoPlayerMode && !isPlayerTwoAI) {
-                            keyboardP2ShootDown = true; // P2 (menselijk) vuurt ook met Enter
-                        }
-                    }
-                    // <<< EINDE GEWIJZIGD >>>
-
-                    // Fallback voor e.key als e.code niet overeenkwam voor P2-toetsen
                     if (!keyboardP2LeftDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "j") keyboardP2LeftDown = true;
                     if (!keyboardP2RightDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "l") keyboardP2RightDown = true;
                     if (!keyboardP2ShootDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "i") keyboardP2ShootDown = true;
                 }
             }
         } else { // Menu or Score Screen
-            if (isTouchActiveMenu) return; // Negeer keyboard als menu touch actief is
+            if (isTouchActiveMenu) return;
 
             if (isShowingScoreScreen && !isTransitioningToDemoViaScoreScreen) {
                 if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key !== 'p' && e.key !== 'P') {
@@ -1046,53 +1043,29 @@ function handleKeyDown(e) {
                 switch (e.key) {
                     case "ArrowUp": case "w": selectedButtonIndex = (selectedButtonIndex <= 0) ? 1 : 0; startAutoDemoTimer(); break;
                     case "ArrowDown": case "s": selectedButtonIndex = (selectedButtonIndex >= 1) ? 0 : 1; startAutoDemoTimer(); break;
-                    case "Enter": case " ": // Enter in menu blijft bevestigen
+                    case "Enter": case " ":
                         if (isPlayerSelectMode) {
                             if (selectedButtonIndex === 0) { startGame1P(); }
                             else { startGame2P(); }
                         } else if (isOnePlayerGameTypeSelectMode) {
-                            if (selectedButtonIndex === 0) { // 1P -> NORMAL GAME (Classic)
-                                isOnePlayerGameTypeSelectMode = false;
-                                isFiringModeSelectMode = true;
-                                selectedOnePlayerGameVariant = 'CLASSIC_1P';
-                                selectedGameMode = 'normal';
-                                isTwoPlayerMode = false; isPlayerTwoAI = false;
-                                selectedButtonIndex = 0;
-                            } else { // 1P -> GAME VS AI
-                                isOnePlayerGameTypeSelectMode = false;
-                                isOnePlayerVsAIGameTypeSelectMode = true;
-                                selectedButtonIndex = 0;
-                            }
-                        } else if (isOnePlayerVsAIGameTypeSelectMode) { // 1P -> GAME VS AI -> Normal / Coop
-                            if (selectedButtonIndex === 0) { // 1P vs AI NORMAL
-                                selectedOnePlayerGameVariant = '1P_VS_AI_NORMAL';
-                                selectedGameMode = 'normal';
-                            } else { // 1P vs AI COOP
-                                selectedOnePlayerGameVariant = '1P_VS_AI_COOP';
-                                selectedGameMode = 'coop';
-                            }
-                            isOnePlayerVsAIGameTypeSelectMode = false;
-                            isFiringModeSelectMode = true;
-                            isTwoPlayerMode = true; isPlayerTwoAI = true;
-                            selectedButtonIndex = 0;
-                        } else if (isGameModeSelectMode) { // 2P HUMAN -> Normal / Coop
-                            if (selectedButtonIndex === 0) { selectedGameMode = 'normal'; }
-                            else { selectedGameMode = 'coop'; }
-                            isGameModeSelectMode = false; isFiringModeSelectMode = true;
-                            isTwoPlayerMode = true; isPlayerTwoAI = false;
-                            selectedButtonIndex = 0;
+                            if (selectedButtonIndex === 0) { isOnePlayerGameTypeSelectMode = false; isFiringModeSelectMode = true; selectedOnePlayerGameVariant = 'CLASSIC_1P'; selectedGameMode = 'normal'; isTwoPlayerMode = false; isPlayerTwoAI = false; selectedButtonIndex = 0; }
+                            else { isOnePlayerGameTypeSelectMode = false; isOnePlayerVsAIGameTypeSelectMode = true; selectedButtonIndex = 0; }
+                        } else if (isOnePlayerVsAIGameTypeSelectMode) {
+                            if (selectedButtonIndex === 0) { selectedOnePlayerGameVariant = '1P_VS_AI_NORMAL'; selectedGameMode = 'normal'; }
+                            else { selectedOnePlayerGameVariant = '1P_VS_AI_COOP'; selectedGameMode = 'coop'; }
+                            isOnePlayerVsAIGameTypeSelectMode = false; isFiringModeSelectMode = true; isTwoPlayerMode = true; isPlayerTwoAI = true; selectedButtonIndex = 0;
+                        } else if (isGameModeSelectMode) {
+                            if (selectedButtonIndex === 0) { selectedGameMode = 'normal'; } else { selectedGameMode = 'coop'; }
+                            isGameModeSelectMode = false; isFiringModeSelectMode = true; isTwoPlayerMode = true; isPlayerTwoAI = false; selectedButtonIndex = 0;
                         } else if (isFiringModeSelectMode) {
-                            if (selectedButtonIndex === 0) { selectedFiringMode = 'rapid'; }
-                            else { selectedFiringMode = 'single'; }
+                            if (selectedButtonIndex === 0) { selectedFiringMode = 'rapid'; } else { selectedFiringMode = 'single'; }
                             baseStartGame(true);
-                        } else { // Hoofdmenu
+                        } else {
                             if (selectedButtonIndex === 0) { isPlayerSelectMode = true; selectedButtonIndex = 0;}
                             else if (selectedButtonIndex === 1) { exitGame(); }
                         }
                         startAutoDemoTimer(); break;
-                    case "Escape":
-                        goBackInMenu(); // Gebruik de helper functie
-                        startAutoDemoTimer(); break;
+                    case "Escape": goBackInMenu(); startAutoDemoTimer(); break;
                     default: startAutoDemoTimer(); break;
                 }
             }
@@ -1101,8 +1074,15 @@ function handleKeyDown(e) {
 }
 function handleKeyUp(e) {
     try {
-        // Key up events worden altijd verwerkt, ongeacht touch state,
-        // om te zorgen dat knoppen correct losgelaten worden.
+        if (e.key === "Enter") {
+            keyboardP1ShootDown = false;
+            keyboardP2ShootDown = false;
+            if (selectedFiringMode === 'single') {
+                p1JustFiredSingle = false;
+                p2JustFiredSingle = false;
+            }
+        }
+
         switch (e.code) {
             case "ArrowLeft": case "KeyA": keyboardP1LeftDown = false; break;
             case "ArrowRight": case "KeyD": keyboardP1RightDown = false; break;
@@ -1110,16 +1090,6 @@ function handleKeyUp(e) {
                 keyboardP1ShootDown = false;
                 if (selectedFiringMode === 'single') p1JustFiredSingle = false;
                 break;
-            // <<< GEWIJZIGD: Ook "Enter" afhandelen voor p1JustFiredSingle (en p2JustFiredSingle) >>>
-            case "Enter":
-                keyboardP1ShootDown = false;
-                if (selectedFiringMode === 'single') p1JustFiredSingle = false;
-                if (isTwoPlayerMode && !isPlayerTwoAI) {
-                    keyboardP2ShootDown = false;
-                    if (selectedFiringMode === 'single') p2JustFiredSingle = false;
-                }
-                break;
-            // <<< EINDE GEWIJZIGD >>>
             case "KeyJ": case "Numpad4": keyboardP2LeftDown = false; break;
             case "KeyL": case "Numpad6": keyboardP2RightDown = false; break;
             case "KeyI": case "Numpad0":
@@ -1127,7 +1097,6 @@ function handleKeyUp(e) {
                 if (selectedFiringMode === 'single') p2JustFiredSingle = false;
                 break;
         }
-        // Fallback voor e.key (omdat Enter nu via e.code wordt afgehandeld voor P1/P2)
         if (e.key.toLowerCase() === "j") keyboardP2LeftDown = false;
         if (e.key.toLowerCase() === "l") keyboardP2RightDown = false;
         if (e.key.toLowerCase() === "i") {
