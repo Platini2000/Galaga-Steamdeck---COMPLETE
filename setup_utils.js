@@ -965,10 +965,10 @@ function handleKeyDown(e) {
         if (isTouchActiveGame && isInGameState) {
             if (e.key === 'p' || e.key === 'P') { // Pauze mag altijd
                  if(typeof togglePause === 'function') togglePause();
-            } else if (e.key === "Escape") { // Menu verlaten mag altijd met Escape
+            } else if (e.key === "Escape") { // Menu verlaten mag altijd (alleen Escape nu)
                  if(isInGameState && typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu();
             }
-            // Andere game-gerelateerde keyboard input (incl. Enter) wordt genegeerd als touch actief is.
+            // Andere game-gerelateerde keyboard input wordt genegeerd als touch actief is.
             return;
         }
 
@@ -992,47 +992,43 @@ function handleKeyDown(e) {
             }
 
             if (!isPaused) {
-                if (!isManualControl) { // AI Demo modes
+                if (!isManualControl) {
                     if (isPlayerTwoAI && selectedGameMode === 'normal' && currentPlayer === 2) {
-                        // AI P2 is active, P1 (mens) kan niet stoppen via AI-demo "any key" logic.
+                        // AI P2 is active, P1 (mens) kan niet stoppen.
                     } else {
-                        if (e.key === "Escape") { // Alleen Escape om AI demo te stoppen
+                        // <<< GEWIJZIGD: Enter gaat niet meer terug naar menu vanuit AI demo >>>
+                        if (e.key === "Escape") {
                             if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu();
-                        } else if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key !== 'p' && e.key !== 'P' && e.key !== "Enter") {
-                            // Vorige logica voor 'any key' om demo te stoppen
-                            // if(typeof showMenuState === 'function') showMenuState();
+                        } else if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key !== 'p' && e.key !== 'P' && e.key !== "Enter") { // Ook Enter hier negeren
+                            if(typeof showMenuState === 'function') showMenuState();
                         }
                     }
-                } else { // Manual Control
+                } else { // Manual control
+                    // <<< GEWIJZIGD: Enter als vuurknop, en niet meer terug naar menu >>>
+                    let enterPressedThisEvent = (e.code === "Enter" || e.key === "Enter");
+
                     switch (e.code) {
                         case "ArrowLeft": case "KeyA": keyboardP1LeftDown = true; break;
                         case "ArrowRight": case "KeyD": keyboardP1RightDown = true; break;
                         case "Space": case "ArrowUp": case "KeyW":
                             keyboardP1ShootDown = true;
                             break;
-                        case "Enter": // Enter is nu vuurknop
-                            if (isTwoPlayerMode && selectedGameMode === 'coop' && !isPlayerTwoAI) { // Human CO-OP
-                                // Bepaal wie er vuurt op basis van een simpele logica, of laat P1 vuren
-                                // Dit kan complexer gemaakt worden (bijv. afhankelijk van welke kant van het toetsenbord het meest recent is gebruikt)
-                                // Voor nu: P1 vuurt met Enter in CO-OP. P2 gebruikt zijn eigen 'I' toets.
-                                keyboardP1ShootDown = true;
-                            } else if (isTwoPlayerMode && selectedGameMode === 'normal' && !isPlayerTwoAI) { // Human Normal (Alternating)
-                                if (currentPlayer === 1) keyboardP1ShootDown = true;
-                                else keyboardP2ShootDown = true;
-                            } else if (!isTwoPlayerMode || (isPlayerTwoAI && selectedGameMode === 'normal' && currentPlayer === 1) || (isPlayerTwoAI && selectedGameMode === 'coop')) { // 1P Classic, of P1 in 1P vs AI (Normal/Coop)
-                                keyboardP1ShootDown = true;
-                            }
-                            break;
                         case "KeyJ": case "Numpad4": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2LeftDown = true; break;
                         case "KeyL": case "Numpad6": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2RightDown = true; break;
-                        case "KeyI": case "Numpad0": // Numpad0 blijft P2 vuur
-                            if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2ShootDown = true;
-                            break;
-                        case "Escape": // Alleen Escape om spel te verlaten
-                            if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu();
-                            break;
+                        case "KeyI": case "Numpad0": if(isTwoPlayerMode && !isPlayerTwoAI) keyboardP2ShootDown = true; break;
+                        case "Escape": if(typeof stopGameAndShowMenu === 'function') stopGameAndShowMenu(); break;
+                        // Enter wordt hieronder afgehandeld
                     }
 
+                    if (enterPressedThisEvent) {
+                        keyboardP1ShootDown = true; // P1 vuurt met Enter
+                        if (isTwoPlayerMode && !isPlayerTwoAI) {
+                            keyboardP2ShootDown = true; // P2 (menselijk) vuurt ook met Enter
+                        }
+                    }
+                    // <<< EINDE GEWIJZIGD >>>
+
+                    // Fallback voor e.key als e.code niet overeenkwam voor P2-toetsen
                     if (!keyboardP2LeftDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "j") keyboardP2LeftDown = true;
                     if (!keyboardP2RightDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "l") keyboardP2RightDown = true;
                     if (!keyboardP2ShootDown && isTwoPlayerMode && !isPlayerTwoAI && e.key.toLowerCase() === "i") keyboardP2ShootDown = true;
@@ -1050,7 +1046,7 @@ function handleKeyDown(e) {
                 switch (e.key) {
                     case "ArrowUp": case "w": selectedButtonIndex = (selectedButtonIndex <= 0) ? 1 : 0; startAutoDemoTimer(); break;
                     case "ArrowDown": case "s": selectedButtonIndex = (selectedButtonIndex >= 1) ? 0 : 1; startAutoDemoTimer(); break;
-                    case "Enter": case " ": // Enter in menu betekent selecteren
+                    case "Enter": case " ": // Enter in menu blijft bevestigen
                         if (isPlayerSelectMode) {
                             if (selectedButtonIndex === 0) { startGame1P(); }
                             else { startGame2P(); }
@@ -1114,25 +1110,24 @@ function handleKeyUp(e) {
                 keyboardP1ShootDown = false;
                 if (selectedFiringMode === 'single') p1JustFiredSingle = false;
                 break;
-            case "Enter": // Enter loslaten
-                // Reset voor P1
+            // <<< GEWIJZIGD: Ook "Enter" afhandelen voor p1JustFiredSingle (en p2JustFiredSingle) >>>
+            case "Enter":
                 keyboardP1ShootDown = false;
                 if (selectedFiringMode === 'single') p1JustFiredSingle = false;
-
-                // Reset voor P2 als Enter voor P2 was
-                if (isTwoPlayerMode && selectedGameMode === 'normal' && !isPlayerTwoAI && currentPlayer === 2) {
+                if (isTwoPlayerMode && !isPlayerTwoAI) {
                     keyboardP2ShootDown = false;
                     if (selectedFiringMode === 'single') p2JustFiredSingle = false;
                 }
-                // In CO-OP laten we P2 zijn eigen 'I' toets gebruiken, dus Enter loslaten is hier alleen voor P1.
                 break;
+            // <<< EINDE GEWIJZIGD >>>
             case "KeyJ": case "Numpad4": keyboardP2LeftDown = false; break;
             case "KeyL": case "Numpad6": keyboardP2RightDown = false; break;
-            case "KeyI": case "Numpad0": // Numpad0 loslaten voor P2
+            case "KeyI": case "Numpad0":
                 keyboardP2ShootDown = false;
                 if (selectedFiringMode === 'single') p2JustFiredSingle = false;
                 break;
         }
+        // Fallback voor e.key (omdat Enter nu via e.code wordt afgehandeld voor P1/P2)
         if (e.key.toLowerCase() === "j") keyboardP2LeftDown = false;
         if (e.key.toLowerCase() === "l") keyboardP2RightDown = false;
         if (e.key.toLowerCase() === "i") {
